@@ -44,6 +44,53 @@ drawPoint() {
 	canvas[$[ $[ $2*80 ]+$1 ]]=1
 	return 0
 }
+drawLineNew() {
+	local changed="0 -eq 1"
+	local x=$1
+	local y=$2
+	abs $[$3-$1]
+	local dx=$absval
+	abs $[$4-$2]
+	local dy=$absval
+	signum $[$3-$1]
+	local signx=$signval
+	signum $[$4-$2]
+	local signy=$signval
+	if [ $dy -gt $dx ];
+	then
+		changed="1 -eq 1"
+		local temp=$dx
+		dx=$dy
+		dy=$temp
+	fi
+	local e=$[2*$dy-$dx]
+	local i=1
+	while [ $i -le $dx ];
+	do
+		echo $x $y
+		drawPoint $x $y
+		while [ $e -ge 0 ];
+		do
+			if [ $changed ];
+			then
+				x=$[$x+1]
+			else
+				y=$[$y+1]
+			fi
+			e=$[$e-2*$dx]
+		done
+		if [ $changed ];
+		then
+			y=$[$y+$signy]
+		else
+			x=$[$x+$signx]
+		fi
+		e=$[$e+2*$dy]
+		i=$[$i+1]
+	done
+
+}
+
 #always draws a line between the two points correctly. Chooses the right algorithm.
 drawLineSafe() { #function line(x0, y0, x1, y1)
 	if [ $1 -eq $3 ];
@@ -54,86 +101,9 @@ drawLineSafe() { #function line(x0, y0, x1, y1)
 		then
 			drawHorizontal $1 $2 $3 $4
 		else
-			if [ $[$[$3-$1] / $[$4-$2]] -eq 0 ]; #rise > run
-			then
-				drawLineInv $1 $2 $3 $4
-			else
-				drawLine $1 $2 $3 $4
-			fi
+			drawLineNew $1 $2 $3 $4
 		fi
 	fi
-	return 0
-}
-#draws the special case of the vertical line.
-drawVertical() {
-	if [ $2 -gt $4 ];
-	then
-		drawVertical $3 $4 $1 $2
-		return 0
-	fi
-	y=$2
-	while [ $y -le $4 ];
-	do
-		drawPoint $1 $y
-		y=$[$y+1]
-	done
-	return 0
-}
-drawHorizontal() {
-	if [ $1 -gt $3 ];
-	then
-		drawVertical $3 $4 $1 $2
-		return 0
-	fi
-	x=$1
-	while [ $x -le $3 ];
-	do
-		drawPoint $x $2
-		x=$[$x+1]
-	done
-	return 0
-}
-#draws a line on the canvas using bresenham's line drawing algorithm (integral version).
-drawLine() { #function line(x0, y0, x1, y1)
-	if [ $1 -gt $3 ];
-	then
-		drawLine $3 $4 $1 $2
-		return 0
-	fi
-    errorrem=0
-    deltaerr=$[$4-$2]/$[$3-$1] # deltaerr=abs(deltay/deltax)
-    deltarem=$[$4-$2]%$[$3-$1]
-    y=$2
-    x=$1
-    while [ $x -le $3 ];
-    do
-     	drawPoint $x $y
-     	errorrem=$[$errorrem+$deltarem]
-     	y=$[$y+$deltaerr+$[$errorrem / $[$3-$1]]]
-     	errorrem=$[$errorrem % $[$3-$1]]
-		x=$[$x+1]
-	done
-	return 0
-}
-drawLineInv() {
-	if [ $2 -gt $4 ];
-	then
-		drawLineInv $3 $4 $1 $2
-		return 0
-	fi
-    errorrem=0
-    deltaerr=$[$3-$1]/$[$4-$2] # deltaerr=abs(deltay/deltax)
-    deltarem=$[$3-$1]%$[$4-$2]
-    y=$2
-    x=$1
-    while [ $y -le $4 ];
-    do
-     	drawPoint $x $y
-     	errorrem=$[$errorrem+$deltarem]
-     	x=$[$x+$deltaerr+$[$errorrem / $[$4-$2]]]
-     	errorrem=$[$errorrem % $[$4-$2]]
-		y=$[$y+1]
-	done
 	return 0
 }
 
@@ -345,6 +315,12 @@ drawTri() { #function tri(x0, y0, x1, y1, x2, y2)
 	echo "FlatTopTri $3 $4 $x4 $4 $5 $6"
 	drawFlatTopTri $3 $4 $x4 $4 $5 $6
 }
+drawTriWire() {
+	echo "Drawing ( $1 , $2 ) ( $3 , $4 ) ( $5, $6 )"
+	drawLineSafe $1 $2 $3 $4
+	drawLineSafe $3 $4 $5 $6
+	drawLineSafe $1 $2 $5 $6
+}
 drawTriSafe() {
 	if [ $2 -le $4 ];
 	then
@@ -406,7 +382,7 @@ loadTeapot
 j=0
 while [ $j -lt 1 ];
 do
-	time drawTriSafe $[$RANDOM % 80] $[$RANDOM % 24] $[$RANDOM % 80] $[$RANDOM % 24] $[$RANDOM % 80] $[$RANDOM % 24] 
+	time drawLineSafe 10 20 20 10
 	i=0
 	#outputs the canvas to the screen
 	#clear
